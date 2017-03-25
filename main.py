@@ -69,11 +69,13 @@ def check_selected_base_path(path_object):
     for file_name in files_to_check:
         path_to_check = path_object / file_name
         if not path_to_check.exists():
-            log.error('The following path does not seem to be the base install '
-                      'of Battle.net because it does not have the file: {} in it. '
-                      'Path: {}'.format(file_name, path_object.as_posix()))
-            return False
-    return True
+            msg = (
+                'The following path does not seem to be the base install '
+                'of Battle.net because it does not have the file: {} in it. '
+                'Path: {}'.format(file_name, path_object.as_posix())
+            )
+            log.error(msg)
+            raise FileNotFoundError(msg)
 
 
 def check_selected_app_path(path_object):
@@ -82,11 +84,13 @@ def check_selected_app_path(path_object):
     for file_name in files_to_check:
         path_to_check = path_object / file_name
         if not path_to_check.exists():
-            log.error('The following path does not seem to be an app install of '
-                      'Battle.net because it does not have the file: {} in it. '
-                      'Path: {}'.format(file_name, path_object.as_posix()))
-            return False
-    return True
+            msg = (
+                'The following path does not seem to be an app install of '
+                'Battle.net because it does not have the file: {} in it. '
+                'Path: {}'.format(file_name, path_object.as_posix())
+            )
+            log.error(msg)
+            raise FileNotFoundError(msg)
 
 
 def get_registry_path():
@@ -129,8 +133,10 @@ def get_install_path():
         user_path = get_user_path(initial_dir=r'C:/Program Files (x86)/')
 
     if reg_likely_path != user_path:
-        msg = ('Registry path and user defined path do not match. '
-               'reg_likely_path: {} != user_path: {}'.format(reg_likely_path, user_path))
+        msg = (
+            'Registry path and user defined path do not match. '
+            'reg_likely_path: {} != user_path: {}'.format(reg_likely_path, user_path)
+        )
         log.error(msg)
         raise AssertionError(msg)
 
@@ -201,9 +207,9 @@ def patch_mpq_archive(latest_app_path):
 def battle_net_is_closed():
     """The MPQ archive can't be patched if Battle.net is still running. Check if it is."""
     names_to_check = ['Battle.net.exe', 'Battle.net Launcher.exe', 'Battle.net Helper.exe']
-    for proc in psutil.process_iter():
+    for process in psutil.process_iter():
         try:
-            if proc.name() in names_to_check:
+            if process.name() in names_to_check:
                 return False
         except psutil.NoSuchProcess:
             log.exception()
@@ -212,11 +218,11 @@ def battle_net_is_closed():
 
 def close_battle_net():
     """Terminate the process using the equivalent of SIGTERM."""
-    for proc in psutil.process_iter():
+    for process in psutil.process_iter():
         try:
-            if proc.name() == 'Battle.net.exe':
-                proc.terminate()
-                proc.wait(timeout=2)
+            if process.name() == 'Battle.net.exe':
+                process.terminate()
+                process.wait(timeout=2)
         except psutil.NoSuchProcess:
             log.exception()
 
@@ -231,12 +237,14 @@ def main():
         if result:
             close_battle_net()
     if not battle_net_is_closed():
-        raise Exception('Battle.net is not closed. Can not access MPQ file.')
+        msg = 'Battle.net is not closed. Can not access MPQ file.'
+        log.error(msg)
+        raise ValueError(msg)
 
     install_path = get_install_path()
     latest_app_path = get_latest_app_install(install_path)
-    if not check_selected_app_path(latest_app_path):
-        raise Exception('App path does not meet requirements.')
+    # Will raise an exception if path doesn't have necessary files.
+    check_selected_app_path(latest_app_path)
     backup_mpq_file(latest_app_path)
     if confirm_patch(latest_app_path):
         patch_mpq_archive(latest_app_path)
