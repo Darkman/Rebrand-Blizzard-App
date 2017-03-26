@@ -15,6 +15,8 @@ from tkinter.messagebox import showinfo, askyesno
 reg_key_path = r'SOFTWARE\WOW6432Node\Blizzard Entertainment\Battle.net\Capabilities'
 reg_key_value_name = 'ApplicationIcon'
 
+log = None
+
 
 def setup_logging():
     log_config_file = 'logs/log_config.yaml'
@@ -228,6 +230,11 @@ def close_battle_net():
 
 
 def main():
+    setup_logging()
+    global log
+    log = logging.getLogger(__name__)
+    log.debug('Program start.')
+
     # Hide GUI root window.
     root = tkinter.Tk()
     root.withdraw()
@@ -253,7 +260,4 @@ def main():
 
 
 if __name__ == "__main__":
-    setup_logging()
-    log = logging.getLogger(__name__)
-    log.debug('Program start.')
     main()
