@@ -1,11 +1,13 @@
 import os
 import re
+import sys
+import time
 import yaml
 import psutil
 import winreg
-import logging.config
 import tkinter
 import subprocess
+import logging.config
 
 from shutil import copy
 from pathlib import Path
@@ -26,7 +28,7 @@ def setup_logging():
         logging.config.dictConfig(config)
     else:
         logging.basicConfig(level=logging.INFO)
-        log.warning('Log config could not be loaded, falling back to logging.basicConfig().')
+        logging.warning('Log config could not be loaded, falling back to logging.basicConfig().')
 
 
 def get_registry_key_value(key_path, value_name):
@@ -43,7 +45,7 @@ def get_registry_key_value(key_path, value_name):
             value_data, _ = raw_value
             return value_data
     except WindowsError:
-        log.exception()
+        log.error('Could not find Battle.net registry entry.')
         return None
 
 
@@ -77,7 +79,7 @@ def check_selected_base_path(path_object):
                 'Path: {}'.format(file_name, path_object.as_posix())
             )
             log.error(msg)
-            raise FileNotFoundError(msg)
+            sys.exit('Exiting...')
 
 
 def check_selected_app_path(path_object):
@@ -92,7 +94,7 @@ def check_selected_app_path(path_object):
                 'Path: {}'.format(file_name, path_object.as_posix())
             )
             log.error(msg)
-            raise FileNotFoundError(msg)
+            sys.exit('Exiting...')
 
 
 def get_registry_path():
@@ -105,7 +107,7 @@ def get_registry_path():
         else:
             msg = 'Path does not exist: {}'.format(reg_likely_path.as_posix())
             log.error(msg)
-            raise FileNotFoundError(msg)
+            sys.exit('Exiting...')
     else:
         return None
 
@@ -117,12 +119,12 @@ def get_user_path(initial_dir):
     if not user_dir:
         msg = 'User canceled the ask directory dialog.'
         log.debug(msg)
-        raise KeyboardInterrupt(msg)
+        sys.exit('Exiting...')
     user_path = Path(user_dir)
     if not user_path.exists():
         msg = 'Path does not exist: {}'.format(user_path.as_posix())
         log.error(msg)
-        raise FileNotFoundError(msg)
+        sys.exit('Exiting...')
     return user_path
 
 
@@ -140,12 +142,9 @@ def get_install_path():
             'reg_likely_path: {} != user_path: {}'.format(reg_likely_path, user_path)
         )
         log.error(msg)
-        raise AssertionError(msg)
+        sys.exit('Exiting...')
 
-    if not check_selected_base_path(user_path):
-        msg = 'Given path does not meet requirements. {}'.format(user_path.as_posix())
-        log.error(msg)
-        raise ValueError(msg)
+    check_selected_base_path(user_path)
 
     return user_path
 
@@ -203,7 +202,7 @@ def patch_mpq_archive(latest_app_path):
             'Make sure Battle.net is completely closed (from tray).'
         )
         log.error(msg)
-        raise ValueError(msg)
+        sys.exit('Exiting...')
 
 
 def battle_net_is_closed():
@@ -214,7 +213,7 @@ def battle_net_is_closed():
             if process.name() in names_to_check:
                 return False
         except psutil.NoSuchProcess:
-            log.exception()
+            log.exception('Tried to access a process that does not exist.')
     return True
 
 
@@ -226,7 +225,7 @@ def close_battle_net():
                 process.terminate()
                 process.wait(timeout=2)
         except psutil.NoSuchProcess:
-            log.exception()
+            log.exception('Tried to access a process that does not exist.')
 
 
 def main():
@@ -243,10 +242,10 @@ def main():
         result = askyesno('Close Battle.net', 'Battle.net is still running, do you want to force close it?')
         if result:
             close_battle_net()
+            time.sleep(1)
     if not battle_net_is_closed():
-        msg = 'Battle.net is not closed. Can not access MPQ file.'
-        log.error(msg)
-        raise ValueError(msg)
+        log.error('Battle.net is not closed. Can not access MPQ file.')
+        sys.exit('Exiting...')
 
     install_path = get_install_path()
     latest_app_path = get_latest_app_install(install_path)
