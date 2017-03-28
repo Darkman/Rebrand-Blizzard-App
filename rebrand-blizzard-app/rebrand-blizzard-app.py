@@ -114,6 +114,7 @@ def get_registry_path():
 
 def get_user_path(initial_dir):
     """Ask user for install location to confirm."""
+    log.info('Please select the install location of Battle.net.')
     user_dir = ask_base_install_dir(initial_dir)
     log.debug('user_dir: {}'.format(user_dir))
     if not user_dir:
@@ -232,7 +233,7 @@ def main():
     setup_logging()
     global log
     log = logging.getLogger(__name__)
-    log.debug('Program start.')
+    log.info('Program start.')
 
     # Hide GUI root window.
     root = tkinter.Tk()
@@ -255,7 +256,7 @@ def main():
     if confirm_patch(latest_app_path):
         patch_mpq_archive(latest_app_path)
         showinfo('Finished', 'The Blizzard App should now be Battle.net again.')
-    log.debug('Program finish.')
+    log.info('Program finish.')
 
 
 if __name__ == "__main__":
